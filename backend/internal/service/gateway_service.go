@@ -5566,6 +5566,9 @@ func (s *GatewayService) buildUpstreamRequest(ctx context.Context, c *gin.Contex
 		}
 	}
 
+	// 第三方品牌清洗 + 敏感工具名 cc_ 前缀伪装（需在 CCH 签名之前，因签名计算基于最终 body）
+	body = applyCloakingToBody(body)
+
 	// 同步 billing header cc_version 与实际发送的 User-Agent 版本
 	if fingerprint != nil {
 		body = syncBillingHeaderVersion(body, fingerprint.UserAgent)
@@ -6789,6 +6792,11 @@ func (s *GatewayService) handleStreamingResponse(ctx context.Context, resp *http
 			}
 		}
 
+		// 还原 cc_ 前缀工具名（content_block_start / message_start 中的 tool_use）
+		if uncloakToolNamesInSSEEvent(event) {
+			eventChanged = true
+		}
+
 		usagePatch := s.extractSSEUsagePatch(event)
 		if anthropicStreamEventIsTerminal(eventName, dataLine) {
 			sawTerminalEvent = true
@@ -7203,6 +7211,9 @@ func (s *GatewayService) handleNonStreamingResponse(ctx context.Context, resp *h
 	if originalModel != mappedModel {
 		body = s.replaceModelInResponseBody(body, mappedModel, originalModel)
 	}
+
+	// 还原 cc_ 前缀工具名
+	body = uncloakToolNamesInNonStreamingBody(body)
 
 	responseheaders.WriteFilteredHeaders(c.Writer.Header(), resp.Header, s.responseHeaderFilter)
 
@@ -8567,6 +8578,9 @@ func (s *GatewayService) buildCountTokensRequest(ctx context.Context, c *gin.Con
 			}
 		}
 	}
+
+	// 第三方品牌清洗 + 敏感工具名 cc_ 前缀伪装（需在 CCH 签名之前）
+	body = applyCloakingToBody(body)
 
 	// 同步 billing header cc_version 与实际发送的 User-Agent 版本
 	if ctFingerprint != nil && ctEnableFP {
