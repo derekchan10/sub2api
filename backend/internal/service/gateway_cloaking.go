@@ -96,6 +96,32 @@ var sanitizeRules = []struct {
 	// model this as a single-line rule that will repeat-apply via the loop below.
 	{regexp.MustCompile(`\n[ \t]*red-teaming:[ \t]*[^\n]*`), ""},
 	{regexp.MustCompile(`\n[ \t]*- obliteratus:[^\n]*`), ""},
+	{regexp.MustCompile(`\n[ \t]*- godmode:[^\n]*`), ""},
+
+	// ---- Hermes session-context block (giveaway non-Claude-Code framework markers) ----
+	// Hermes appends a structured footer to the system prompt with model name,
+	// provider, source platform, etc. These lines never appear in real Claude Code
+	// system prompts; upstream policy uses them as anti-mimic signals.
+	{regexp.MustCompile(`\n## Current Session Context[\s\S]*?(?:\n## |\z)`), "\n"},
+	{regexp.MustCompile(`(?m)^Conversation started:[^\n]*\n?`), ""},
+	{regexp.MustCompile(`(?m)^Model:[^\n]*\n?`), ""},
+	{regexp.MustCompile(`(?m)^Provider:[^\n]*\n?`), ""},
+	{regexp.MustCompile(`(?m)^\*\*Source:\*\*[^\n]*\n?`), ""},
+	{regexp.MustCompile(`(?m)^\*\*User:\*\*[^\n]*\n?`), ""},
+	{regexp.MustCompile(`(?m)^\*\*Connected Platforms:\*\*[^\n]*\n?`), ""},
+	{regexp.MustCompile(`(?m)^\*\*Delivery options[^\n]*\n?`), ""},
+
+	// Hermes-specific tool / framework names that betray non-Claude-Code origin.
+	{regexp.MustCompile(`\bsession_search\b`), "search_tool"},
+	{regexp.MustCompile(`\bskill_manage\b`), "tool_manage"},
+	{regexp.MustCompile(`\bskill_view\b`), "tool_view"},
+	{regexp.MustCompile(`\bskills_list\b`), "tools_list"},
+	{regexp.MustCompile(`\bskill tool\b`), "tools"},
+	{regexp.MustCompile(`(?i)\bmemory tool\b`), "tools"},
+	{regexp.MustCompile(`\bdelegate_task\b`), "subtask"},
+	{regexp.MustCompile(`\bcronjob\b`), "scheduled_task"},
+	{regexp.MustCompile(`\bsubagent[s]?-driven-development\b`), "task-driven-development"},
+	{regexp.MustCompile(`(?i)\bsubagent[s]?\b`), "subtask"},
 
 	// ---- OpenClaw domains / CLI command ----
 	{regexp.MustCompile(`https?://docs\.openclaw\.ai\S*`), "https://docs.example.com"},

@@ -3763,7 +3763,11 @@ func rewriteSystemForNonClaudeCode(body []byte, system any) []byte {
 
 	// 3. 将原始 system prompt 作为 user/assistant 消息对注入到 messages 开头
 	//    模型仍通过 messages 接收完整指令，保留客户端功能
+	//    迁移前先跑 sanitizeText：applyCloakingToBody 只清洗 system/tools，
+	//    若不在此处清洗，原 system 中的 Hermes/jailbreak/品牌词会原封进入 messages，
+	//    上游照样识别为第三方应用并以 "out of extra usage" 拒绝。
 	ccPromptTrimmed := strings.TrimSpace(claudeCodeSystemPrompt)
+	originalSystemText = sanitizeText(originalSystemText)
 	if originalSystemText != "" && originalSystemText != ccPromptTrimmed && !hasClaudeCodePrefix(originalSystemText) {
 		instrMsg, err1 := json.Marshal(map[string]any{
 			"role": "user",
